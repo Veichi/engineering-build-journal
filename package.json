@@ -1,0 +1,9 @@
+{
+  "name": "engineering-project-notebook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local engineering project notebook with project-folder JSON persistence.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

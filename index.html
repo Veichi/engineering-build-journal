@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Engineering Build Notebook</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span>Engineering</span>
+          <h1>Build Notebook</h1>
+        </div>
+        <nav id="nav" class="nav"></nav>
+        <div class="sidebar-note">
+          Build. Document. Ship.
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="kicker">Local build workspace</p>
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="top-actions">
+            <span id="saveStatus" class="save-status">Saved locally</span>
+            <button id="exportData" class="button">Backup</button>
+            <label class="button" for="importData">Restore</label>
+            <input id="importData" type="file" accept="application/json" />
+            <button id="resetData" class="button danger">Reset</button>
+          </div>
+        </header>
+        <section id="view" class="view"></section>
+      </main>
+    </div>
+
+    <script src="src/data/mockData.js"></script>
+    <script src="src/utils.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/components/ui.js"></script>
+    <script src="src/pages/dashboard.js"></script>
+    <script src="src/pages/steps.js"></script>
+    <script src="src/pages/skills.js"></script>
+    <script src="src/pages/projects.js"></script>
+    <script src="src/pages/documentation.js"></script>
+    <script src="src/pages/portfolio.js"></script>
+    <script src="src/pages/github.js"></script>
+    <script src="src/pages/resume.js"></script>
+    <script src="src/pages/journal.js"></script>
+    <script src="src/pages/career.js"></script>
+    <script src="src/pages/internship.js"></script>
+    <script src="src/pages/recommender.js"></script>
+    <script src="src/pages/balance.js"></script>
+    <script src="src/app.js"></script>
+  </body>
+</html>
