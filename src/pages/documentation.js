@@ -31,9 +31,10 @@ window.ECOSPages.documentation = {
     return data.projectDocs[project.id];
   },
   completion(doc) {
-    const fields = ["problem", "goal", "parts", "design", "tests", "results", "lessons", "portfolioSummary"];
-    const complete = fields.filter((field) => String(doc?.[field] || "").trim()).length;
-    return window.ECOSUtils.percent(complete, fields.length);
+    const fields = ["problem", "goal", "design", "tests", "results", "lessons", "portfolioSummary"];
+    const checked = Object.values(doc?.checklist || {}).filter(Boolean).length;
+    const complete = fields.filter((field) => String(doc?.[field] || "").trim()).length + Math.min(checked, 3);
+    return window.ECOSUtils.percent(complete, fields.length + 3);
   },
   markdown(project, doc) {
     return `# ${project.title}
@@ -145,6 +146,7 @@ ${doc.repoLink || project.github || ""}
             <p class="muted">Capture the proof as you build. The Portfolio page turns this into career material.</p>
           </div>
           <div class="top-actions">
+            <a class="button" href="#projects">Back to Projects</a>
             <button id="exportProjectMarkdown" class="button" type="button">Markdown</button>
             <button id="exportProjectWord" class="button" type="button">Word Doc</button>
           </div>

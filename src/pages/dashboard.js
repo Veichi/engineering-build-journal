@@ -4,7 +4,9 @@ window.ECOSPages.dashboard = {
   title: "Home",
   render(data) {
     const projects = data.projects || [];
-    const activeProject = projects.find((project) => project.status === "in progress")
+    const selectedProject = projects.find((project) => project.id === data.selectedDocProjectId);
+    const activeProject = selectedProject
+      || projects.find((project) => project.status === "in progress")
       || projects.find((project) => project.status === "planned")
       || projects[0];
     const recommendation = window.ECOSRecommender.pick(data)[0] || activeProject;
