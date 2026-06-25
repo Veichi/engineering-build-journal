@@ -14,6 +14,20 @@ window.ECOSUI = {
   pill(text, cls = "") {
     return `<span class="pill ${cls}">${window.ECOSUtils.escape(text)}</span>`;
   },
+  maturity(project, doc = {}) {
+    const writtenFields = ["problem", "goal", "design", "tests", "results", "lessons", "portfolioSummary"];
+    const writtenCount = writtenFields.filter((field) => String(doc[field] || "").trim()).length;
+    const checkedCount = Object.values(doc.checklist || {}).filter(Boolean).length;
+
+    if (project?.portfolioReady) return { label: "Ready to export", cls: "green" };
+    if (writtenCount >= 3 || checkedCount >= 3 || project?.status === "complete") return { label: "Documented", cls: "blue" };
+    if (project?.status === "in progress" || writtenCount > 0 || checkedCount > 0) return { label: "Building", cls: "amber" };
+    return { label: "Idea", cls: "" };
+  },
+  maturityPill(project, doc = {}) {
+    const maturity = this.maturity(project, doc);
+    return this.pill(maturity.label, maturity.cls);
+  },
   card(title, body, meta = "") {
     return `<article class="card"><div class="row"><h3>${title}</h3>${meta}</div>${body}</article>`;
   },

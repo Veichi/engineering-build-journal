@@ -44,32 +44,133 @@ function escapeHtml(value) {
 }
 
 function projectDoc(data, project) {
-  return data.projectDocs?.[project.id] || {};
+  return project.documentation || data.projectDocs?.[project.id] || {};
 }
 
 function resumeBullet(project) {
   return `${project.actionVerb || "Built"} ${project.technicalTask || project.title} using ${project.toolsUsed || (project.skillsUsed || []).join(", ")}; ${project.measurableResult || "documented results"} to demonstrate ${project.concept || "engineering design"}.`;
 }
 
+function firstAvailable(...values) {
+  return values.map(text).find(Boolean) || "";
+}
+
+function normalizeSentence(value) {
+  const cleaned = text(value).replace(/\s+/g, " ");
+  if (!cleaned) return "";
+  return /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`;
+}
+
+function commaList(value) {
+  if (Array.isArray(value)) return value.map(text).filter(Boolean).join(", ");
+  return text(value);
+}
+
+function technologiesUsed(project, doc) {
+  return firstAvailable(project.technologies, doc.technologies, doc.parts, project.parts, project.toolsUsed, commaList(project.skillsUsed), "Technologies not documented");
+}
+
+function engineeringConcepts(project, doc) {
+  return firstAvailable(project.engineeringConcepts, doc.concepts, project.concept, doc.skills, commaList(project.skillsUsed), "Engineering concepts not documented");
+}
+
+function projectTimeframe(project, doc) {
+  return firstAvailable(project.timeline?.timeframe, doc.timeframe, project.timeframe, "Timeframe not documented");
+}
+
+function professionalProjectSummary(project, doc) {
+  const objective = firstAvailable(doc.goal, doc.problem, `Build and evaluate ${project.title}.`);
+  const built = firstAvailable(doc.design, project.technicalTask, project.notes, `A working ${project.title} prototype was developed.`);
+  const challenge = firstAvailable(doc.problems, doc.wiring, doc.code, "Key engineering work included translating the design goal into a testable hardware/software implementation.");
+  const outcome = firstAvailable(doc.results, doc.lessons, "Final outcome not documented yet.");
+
+  return [
+    normalizeSentence(`Objective: ${objective}`),
+    normalizeSentence(`Implementation: ${built}`),
+    normalizeSentence(`Engineering challenge: ${challenge}`),
+    normalizeSentence(`Outcome: ${outcome}`)
+  ].join(" ");
+}
+
+function accomplishmentBullets(project, doc) {
+  const bullets = [];
+  const tools = technologiesUsed(project, doc);
+  const concepts = engineeringConcepts(project, doc);
+
+  bullets.push(`Designed and built ${text(project.technicalTask) || text(project.title)} using ${tools} to demonstrate ${concepts}.`);
+
+  if (text(doc.tests) || text(doc.results)) {
+    bullets.push(`Validated system behavior through documented testing, measurements, and observed results: ${firstAvailable(doc.results, doc.tests)}.`);
+  }
+
+  if (text(doc.problems)) {
+    bullets.push(`Diagnosed and resolved implementation issues involving ${text(doc.problems)}.`);
+  }
+
+  if (text(doc.wiring) || text(doc.code)) {
+    bullets.push(`Integrated hardware setup and software logic while documenting wiring, code structure, and setup decisions for repeatable use.`);
+  }
+
+  if (text(doc.portfolioSummary) || text(doc.employerValue) || text(doc.lessons)) {
+    bullets.push(`Converted project evidence into export-ready documentation, including technical summary, lessons learned, and next-revision notes.`);
+  }
+
+  while (bullets.length < 3) {
+    bullets.push(`Documented project objective, build process, engineering decisions, and final outcome for future portfolio and interview use.`);
+  }
+
+  return bullets.slice(0, 5);
+}
+
+function professionalResumeEntry(project, doc) {
+  const summary = firstAvailable(doc.professionalSummary, doc.portfolioSummary, professionalProjectSummary(project, doc));
+  return `## ${project.title}
+
+**Timeframe:** ${projectTimeframe(project, doc)}
+
+**Technologies Used:** ${technologiesUsed(project, doc)}
+
+**Engineering Concepts Demonstrated:** ${engineeringConcepts(project, doc)}
+
+**Project Summary:** ${summary}
+
+**Selected Accomplishments**
+${accomplishmentBullets(project, doc).map((bullet) => `- ${bullet}`).join("\n")}
+`;
+}
+
+function linkedJournalEntries(data, project) {
+  const linkedIds = new Set(project.linkedJournalEntryIds || []);
+  return (data.journal || []).filter((entry) => linkedIds.has(entry.id) || (entry.projectIds || []).includes(project.id));
+}
+
+function journalHistoryMarkdown(data, project) {
+  const entries = linkedJournalEntries(data, project);
+  if (!entries.length) return "No linked engineering notebook entries yet.";
+  return entries.map((entry) => `### ${text(entry.date) || "Undated Entry"}
+
+- Objective: ${journalField(entry, "objective", "built") || "Not documented"}
+- Work Completed: ${journalField(entry, "workCompleted", "built") || "Not documented"}
+- Challenges: ${journalField(entry, "challenges", "confused") || "Not documented"}
+- Engineering Decisions: ${journalField(entry, "decisions", "solved") || "Not documented"}
+- Lessons Learned: ${journalField(entry, "lessons", "learned") || "Not documented"}
+- Next Steps: ${journalField(entry, "nextSteps", "next") || "Not documented"}
+`).join("\n");
+}
+
 function markdownProject(data, project) {
   const doc = projectDoc(data, project);
   return `## ${project.title}
 
-${text(doc.portfolioSummary) || text(doc.problem) || "Project summary not written yet."}
+${professionalProjectSummary(project, doc)}
 
 - Status: ${project.status || "planned"}
-- Skills: ${(project.skillsUsed || []).join(", ") || text(doc.skills) || "Not listed"}
-- Tools/Parts: ${text(doc.parts) || project.parts || "Not listed"}
+- Technologies: ${technologiesUsed(project, doc)}
+- Engineering Concepts: ${engineeringConcepts(project, doc)}
 - Repository: ${text(doc.repoLink) || project.github || "Not added"}
 
-### Results
-${text(doc.results) || "Results not documented yet."}
-
-### Employer Value
-${text(doc.employerValue) || "Employer value not documented yet."}
-
-### Lessons Learned
-${text(doc.lessons) || project.lessons || "Lessons not documented yet."}
+### Professional Resume Entry
+${professionalResumeEntry(project, doc)}
 `;
 }
 
@@ -77,17 +178,17 @@ function fullProjectMarkdown(data, project) {
   const doc = projectDoc(data, project);
   return `# ${project.title}
 
-## Project Summary
-${text(doc.portfolioSummary) || text(doc.problem) || project.notes || "Project summary not written yet."}
+## Professional Project Summary
+${professionalProjectSummary(project, doc)}
 
 ## Goal
 ${text(doc.goal) || "Goal not documented yet."}
 
-## Parts and Tools
-${text(doc.parts) || project.parts || "Not listed"}
+## Technologies Used
+${technologiesUsed(project, doc)}
 
-## Skills Practiced
-${text(doc.skills) || (project.skillsUsed || []).join(", ") || "Not listed"}
+## Engineering Concepts Demonstrated
+${engineeringConcepts(project, doc)}
 
 ## Design Notes
 ${text(doc.design) || "Design notes not documented yet."}
@@ -115,14 +216,17 @@ ${text(doc.portfolioSummary) || "Portfolio summary not documented yet."}
 ### Why This Matters To Employers
 ${text(doc.employerValue) || "Employer value not documented yet."}
 
-### Resume Bullet Raw Material
-${text(doc.resumeEvidence) || resumeBullet(project)}
+### Professional Resume Entry
+${text(doc.resumeEvidence) || professionalResumeEntry(project, doc)}
 
 ## Lessons Learned
 ${text(doc.lessons) || project.lessons || "Lessons not documented yet."}
 
 ## Next Revision
 ${text(doc.next) || "Next revision not documented yet."}
+
+## Linked Engineering Notebook History
+${journalHistoryMarkdown(data, project)}
 
 ## Photos / Media
 ${text(doc.photoLinks) || "Media links not added."}
@@ -140,20 +244,11 @@ function generateResumeMarkdown(data) {
   const projects = data.projects || [];
   const completedOrReady = projects.filter((project) => project.status === "complete" || project.portfolioReady);
   const source = completedOrReady.length ? completedOrReady : projects;
-  return `# Resume Project Bullet Drafts
+  return `# Professional Resume Entry
 
-Generated from Engineering Project Notebook.
+Generated from Engineering Build Notebook.
 
-## Project Bullets
-
-${source.map((project) => `- ${resumeBullet(project)}`).join("\n") || "- Add projects to generate bullets."}
-
-## Skills Evidence
-
-${(data.skills || [])
-  .filter((skill) => skill.status === "learning" || skill.status === "completed" || skill.progress > 0)
-  .map((skill) => `- ${skill.name}: ${skill.status}, ${skill.progress || 0}%`)
-  .join("\n") || "- Mark skills as learning or completed to show evidence."}
+${source.map((project) => professionalResumeEntry(project, projectDoc(data, project))).join("\n\n") || "Add projects to generate professional resume entries."}
 `;
 }
 
@@ -161,11 +256,11 @@ function generatePortfolioMarkdown(data) {
   const projects = data.projects || [];
   const ready = projects.filter((project) => project.portfolioReady);
   const source = ready.length ? ready : projects;
-  return `# Portfolio Draft
+  return `# Professional Project Summary
 
-Generated from Engineering Project Notebook.
+Generated from Engineering Build Notebook.
 
-${source.map((project) => markdownProject(data, project)).join("\n\n") || "Add projects to generate a portfolio draft."}
+${source.map((project) => markdownProject(data, project)).join("\n\n") || "Add projects to generate a professional project summary."}
 `;
 }
 
@@ -187,14 +282,79 @@ function markdownToWordHtml(title, markdown) {
   <meta charset="utf-8">
   <title>${escapeHtml(title)}</title>
   <style>
+    @page { margin: 0.75in; }
     body { font-family: Aptos, Calibri, Arial, sans-serif; line-height: 1.45; color: #1f2933; }
-    h1 { font-size: 24pt; }
-    h2 { font-size: 16pt; margin-top: 20pt; }
-    h3 { font-size: 13pt; margin-top: 14pt; }
-    p { font-size: 11pt; }
+    h1 { font-size: 22pt; margin: 0 0 18pt; padding-bottom: 8pt; border-bottom: 1.5pt solid #1f3d36; }
+    h2 { font-size: 15pt; margin: 20pt 0 8pt; color: #1f3d36; }
+    h3 { font-size: 12.5pt; margin: 14pt 0 6pt; color: #263a35; }
+    p { font-size: 10.5pt; margin: 5pt 0; }
+    strong { color: #17211f; }
   </style>
 </head>
 <body>${body}</body>
+</html>`;
+}
+
+function journalField(entry, modernKey, legacyKey) {
+  return firstAvailable(entry[modernKey], entry[legacyKey]);
+}
+
+function generateJournalMarkdown(data) {
+  const entries = data.journal || [];
+  return `# Engineering Notebook
+
+Generated from Engineering Build Notebook.
+
+${entries.map((entry) => `## ${text(entry.date) || "Undated Entry"}
+
+**Objective:** ${journalField(entry, "objective", "built") || "Objective not documented."}
+
+**Work Completed:** ${journalField(entry, "workCompleted", "built") || "Work completed not documented."}
+
+**Challenges Encountered:** ${journalField(entry, "challenges", "confused") || "Challenges not documented."}
+
+**Engineering Decisions:** ${journalField(entry, "decisions", "solved") || "Engineering decisions not documented."}
+
+**Lessons Learned:** ${journalField(entry, "lessons", "learned") || "Lessons learned not documented."}
+
+**Next Steps:** ${journalField(entry, "nextSteps", "next") || "Next steps not documented."}
+`).join("\n\n") || "No journal entries yet."}
+`;
+}
+
+function journalToWordHtml(markdown) {
+  const body = markdown
+    .split("\n")
+    .map((line) => {
+      if (line.startsWith("# ")) return `<h1>${escapeHtml(line.slice(2))}</h1>`;
+      if (line.startsWith("## ")) return `<h2>${escapeHtml(line.slice(3))}</h2>`;
+      if (line.startsWith("**") && line.includes(":**")) {
+        const [label, ...rest] = line.split(":**");
+        return `<p class="notebook-field"><strong>${escapeHtml(label.replaceAll("**", ""))}:</strong>${escapeHtml(rest.join(":**"))}</p>`;
+      }
+      return line.trim() ? `<p>${escapeHtml(line)}</p>` : "";
+    })
+    .join("\n");
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Engineering Notebook</title>
+  <style>
+    @page { margin: 0.8in; }
+    body { font-family: Aptos, Calibri, Arial, sans-serif; color: #17211f; line-height: 1.45; }
+    h1 { font-size: 24pt; margin: 0 0 8pt; padding-bottom: 8pt; border-bottom: 2pt solid #1f3d36; }
+    h2 { font-size: 15pt; margin: 22pt 0 8pt; color: #1f3d36; page-break-after: avoid; }
+    p { font-size: 10.5pt; margin: 5pt 0; }
+    .notebook-field { margin: 8pt 0; }
+    .footer { color: #64716d; font-size: 9pt; text-align: center; margin-top: 24pt; }
+  </style>
+</head>
+<body>
+${body}
+<p class="footer">Engineering Notebook | Page <span style="mso-field-code: PAGE"></span></p>
+</body>
 </html>`;
 }
 
@@ -203,8 +363,8 @@ function bodyOnly(html) {
 }
 
 function generateCareerPacketHtml(data, resumeMarkdown, portfolioMarkdown) {
-  const resumeBody = bodyOnly(markdownToWordHtml("Resume Draft", resumeMarkdown));
-  const portfolioBody = bodyOnly(markdownToWordHtml("Portfolio Draft", portfolioMarkdown));
+  const resumeBody = bodyOnly(markdownToWordHtml("Professional Resume Entry", resumeMarkdown));
+  const portfolioBody = bodyOnly(markdownToWordHtml("Professional Project Summary", portfolioMarkdown));
 
   return `<!doctype html>
 <html>
@@ -236,11 +396,14 @@ async function writeCareerDocs(data) {
   const portfolioMarkdown = generatePortfolioMarkdown(data);
   const packetHtml = generateCareerPacketHtml(data, resumeMarkdown, portfolioMarkdown);
 
-  await fs.writeFile(path.join(exportsDir, "resume-draft.md"), resumeMarkdown, "utf8");
-  await fs.writeFile(path.join(exportsDir, "portfolio-draft.md"), portfolioMarkdown, "utf8");
-  await fs.writeFile(path.join(exportsDir, "resume-draft.doc"), `\ufeff${markdownToWordHtml("Resume Draft", resumeMarkdown)}`, "utf8");
-  await fs.writeFile(path.join(exportsDir, "portfolio-draft.doc"), `\ufeff${markdownToWordHtml("Portfolio Draft", portfolioMarkdown)}`, "utf8");
+  await fs.writeFile(path.join(exportsDir, "professional-resume-entry.md"), resumeMarkdown, "utf8");
+  await fs.writeFile(path.join(exportsDir, "professional-project-summary.md"), portfolioMarkdown, "utf8");
+  await fs.writeFile(path.join(exportsDir, "professional-resume-entry.doc"), `\ufeff${markdownToWordHtml("Professional Resume Entry", resumeMarkdown)}`, "utf8");
+  await fs.writeFile(path.join(exportsDir, "professional-project-summary.doc"), `\ufeff${markdownToWordHtml("Professional Project Summary", portfolioMarkdown)}`, "utf8");
   await fs.writeFile(path.join(exportsDir, "career-packet.html"), packetHtml, "utf8");
+  const journalMarkdown = generateJournalMarkdown(data);
+  await fs.writeFile(path.join(exportsDir, "engineering-notebook.md"), journalMarkdown, "utf8");
+  await fs.writeFile(path.join(exportsDir, "engineering-notebook.doc"), `\ufeff${journalToWordHtml(journalMarkdown)}`, "utf8");
 
   const projectLinks = [];
   for (const project of data.projects || []) {
@@ -254,10 +417,10 @@ async function writeCareerDocs(data) {
 
   await fs.writeFile(path.join(projectExportsDir, "index.html"), `<!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Project Documentation Exports</title></head>
+<head><meta charset="utf-8"><title>Engineering Project Reports</title></head>
 <body>
-  <h1>Project Documentation Exports</h1>
-  <ul>${projectLinks.join("\n") || "<li>No completed or portfolio-ready project docs yet.</li>"}</ul>
+  <h1>Engineering Project Reports</h1>
+  <ul>${projectLinks.join("\n") || "<li>No completed or export-ready engineering project reports yet.</li>"}</ul>
 </body>
 </html>`, "utf8");
 }
@@ -311,10 +474,12 @@ async function handleGenerateDocs(response) {
   send(response, 200, JSON.stringify({
     ok: true,
     files: [
-      "/exports/resume-draft.md",
-      "/exports/resume-draft.doc",
-      "/exports/portfolio-draft.md",
-      "/exports/portfolio-draft.doc",
+      "/exports/professional-resume-entry.md",
+      "/exports/professional-resume-entry.doc",
+      "/exports/professional-project-summary.md",
+      "/exports/professional-project-summary.doc",
+      "/exports/engineering-notebook.md",
+      "/exports/engineering-notebook.doc",
       "/exports/career-packet.html"
     ]
   }), "application/json; charset=utf-8");

@@ -12,12 +12,27 @@ window.ECOSPages.projects = {
     const recommendations = window.ECOSRecommender.pick(data).slice(0, 3);
     const active = data.projects.filter((project) => project.status !== "complete");
     const finished = data.projects.filter((project) => project.status === "complete");
+    const activeProject = data.projects.find((project) => project.id === data.activeProjectId)
+      || data.projects.find((project) => project.status === "in progress")
+      || data.projects[0];
 
     return `
       <section class="panel hero-panel">
-        <p class="kicker">Project suggestions</p>
-        <h3>Choose one build at a time.</h3>
-        <p class="muted">Suggestions are starter-kit friendly first, then gradually move toward portfolio-level engineering projects.</p>
+        <p class="kicker">Active build</p>
+        <div class="row">
+          <h3>${activeProject ? activeProject.title : "Choose one build at a time."}</h3>
+          ${activeProject ? window.ECOSUI.maturityPill(activeProject, activeProject.documentation || {}) : ""}
+        </div>
+        <p class="muted">The app centers on one project at a time so you can build, document, and turn it into portfolio proof without juggling everything.</p>
+        <div class="quick-actions">
+          ${activeProject ? `<a class="button primary" href="#documentation" data-document-project="${activeProject.id}">Document Active Build</a>` : ""}
+        </div>
+      </section>
+
+      <section class="panel">
+        <p class="kicker">Suggestions</p>
+        <h3>Starter-kit friendly next builds</h3>
+        <p class="muted">Pick one when you want to change focus.</p>
       </section>
 
       <section class="grid three">
@@ -25,12 +40,12 @@ window.ECOSPages.projects = {
           <article class="panel">
             <div class="row">
               <h3>${project.title}</h3>
-              ${window.ECOSUI.pill(project.difficulty <= 1 ? "starter" : project.portfolioValue)}
+              ${window.ECOSUI.maturityPill(project, project.documentation || {})}
             </div>
             <p>${this.recommendationReason(project)}</p>
             <p><strong>Parts:</strong> ${project.parts || "Add parts/tools"}</p>
             <div class="quick-actions">
-              <button class="button primary" data-start-project="${project.id}" type="button">Start</button>
+              <button class="button primary" data-start-project="${project.id}" type="button">Make Active</button>
               <a class="button" href="#documentation" data-document-project="${project.id}">Document</a>
             </div>
           </article>
@@ -62,7 +77,7 @@ window.ECOSPages.projects = {
             <div>
               <div class="row">
                 <h3>${project.title}</h3>
-                ${window.ECOSUI.pill(project.status, window.ECOSUtils.statusClass(project.status))}
+                ${window.ECOSUI.maturityPill(project, project.documentation || {})}
               </div>
               <p class="muted">${project.parts || "Parts/tools not added yet."}</p>
               <p>${project.skillsUsed.map((skill) => window.ECOSUI.pill(skill)).join(" ")}</p>
@@ -73,7 +88,8 @@ window.ECOSPages.projects = {
                   ${["planned", "in progress", "complete"].map((status) => `<option ${project.status === status ? "selected" : ""}>${status}</option>`).join("")}
                 </select>
               </label>
-              <label class="check-row"><input data-project-ready="${project.id}" type="checkbox" ${project.portfolioReady ? "checked" : ""} /><span>Portfolio-ready</span></label>
+              <label class="check-row"><input data-project-ready="${project.id}" type="checkbox" ${project.portfolioReady ? "checked" : ""} /><span>Ready to export</span></label>
+              <button class="button" data-make-active="${project.id}" type="button">${project.id === data.activeProjectId ? "Active Build" : "Make Active"}</button>
               <a class="button primary" href="#documentation" data-document-project="${project.id}">Document</a>
             </div>
           </article>
@@ -91,7 +107,7 @@ window.ECOSPages.projects = {
       event.preventDefault();
       const form = new FormData(event.target);
       window.ECOSStore.update((data) => {
-        data.projects.unshift({
+        const project = {
           id: window.ECOSUtils.uid("project"),
           title: form.get("title"),
           status: form.get("status"),
@@ -107,7 +123,11 @@ window.ECOSPages.projects = {
           toolsUsed: form.get("skillsUsed"),
           measurableResult: "documented project results",
           concept: "engineering design"
-        });
+        };
+        project.documentation = window.ECOSPages.documentation.docFor({ projects: [project] }, project.id);
+        data.projects.unshift(project);
+        data.activeProjectId = project.id;
+        data.selectedDocProjectId = project.id;
       });
     });
 
@@ -117,9 +137,22 @@ window.ECOSPages.projects = {
           const project = data.projects.find((item) => item.id === button.dataset.startProject);
           if (!project) return;
           project.status = "in progress";
+          data.activeProjectId = project.id;
           data.selectedDocProjectId = project.id;
         });
         location.hash = "#documentation";
+      });
+    });
+
+    document.querySelectorAll("[data-make-active]").forEach((button) => {
+      button.addEventListener("click", () => {
+        window.ECOSStore.update((data) => {
+          const project = data.projects.find((item) => item.id === button.dataset.makeActive);
+          if (!project) return;
+          if (project.status === "planned") project.status = "in progress";
+          data.activeProjectId = project.id;
+          data.selectedDocProjectId = project.id;
+        });
       });
     });
 
@@ -145,6 +178,7 @@ window.ECOSPages.projects = {
     document.querySelectorAll("[data-document-project]").forEach((link) => {
       link.addEventListener("click", () => {
         window.ECOSStore.update((data) => {
+          data.activeProjectId = link.dataset.documentProject;
           data.selectedDocProjectId = link.dataset.documentProject;
         }, false);
       });

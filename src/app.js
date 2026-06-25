@@ -2,7 +2,8 @@ const routes = [
   ["dashboard", "Home"],
   ["projects", "Projects"],
   ["documentation", "Document"],
-  ["portfolio", "Portfolio"]
+  ["journal", "Notebook"],
+  ["portfolio", "Export Center"]
 ];
 
 const nav = document.querySelector("#nav");
@@ -45,7 +46,7 @@ document.querySelector("#importData").addEventListener("change", async (event) =
   }
 });
 document.querySelector("#resetData").addEventListener("click", () => {
-  if (confirm("Reset Engineering Project Notebook data to a clean starter state? This clears saved progress in this browser.")) {
+  if (confirm("Reset Engineering Build Notebook data to a clean starter state? This clears saved progress in this browser.")) {
     window.ECOSStore.reset();
   }
 });

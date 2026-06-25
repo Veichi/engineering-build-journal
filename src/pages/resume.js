@@ -1,7 +1,7 @@
 window.ECOSPages = window.ECOSPages || {};
 
 window.ECOSPages.resume = {
-  title: "Resume Bullet Generator",
+  title: "Professional Resume Entries",
   generateBullet(project) {
     // Future AI integration point:
     // Send structured project fields, lessons learned, and measured results
@@ -11,8 +11,8 @@ window.ECOSPages.resume = {
   render(data) {
     return `
       <section class="panel">
-        <h3>Generated Resume Bullets</h3>
-        <p class="muted">These are local template-based drafts. Future AI integration can improve wording using project notes, lessons, and measured results.</p>
+        <h3>Professional Resume Entries</h3>
+        <p class="muted">The primary resume export now uses the structured project documentation fields: timeframe, technologies, concepts, summary, and accomplishments.</p>
       </section>
       <section class="stack">
         ${data.projects.map((project) => `

@@ -4,9 +4,8 @@ window.ECOSPages.documentation = {
   title: "Document",
   docFor(data, projectId) {
     const project = data.projects.find((item) => item.id === projectId) || data.projects[0];
-    data.projectDocs = data.projectDocs || {};
-    if (!data.projectDocs[project.id]) {
-      data.projectDocs[project.id] = {
+    if (!project.documentation) {
+      project.documentation = {
         projectId: project.id,
         problem: "",
         goal: "",
@@ -25,10 +24,14 @@ window.ECOSPages.documentation = {
         next: "",
         photoLinks: "",
         repoLink: project.github || "",
+        timeframe: "",
+        technologies: "",
+        concepts: "",
+        professionalSummary: "",
         checklist: {}
       };
     }
-    return data.projectDocs[project.id];
+    return project.documentation;
   },
   completion(doc) {
     const fields = ["problem", "goal", "design", "tests", "results", "lessons", "portfolioSummary"];
@@ -36,19 +39,91 @@ window.ECOSPages.documentation = {
     const complete = fields.filter((field) => String(doc?.[field] || "").trim()).length + Math.min(checked, 3);
     return window.ECOSUtils.percent(complete, fields.length + 3);
   },
+  text(value) {
+    return String(value || "").trim();
+  },
+  firstAvailable(...values) {
+    return values.map((value) => this.text(value)).find(Boolean) || "";
+  },
+  sentence(value) {
+    const cleaned = this.text(value).replace(/\s+/g, " ");
+    if (!cleaned) return "";
+    return /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`;
+  },
+  technologies(project, doc) {
+    return this.firstAvailable(project.technologies, doc.technologies, doc.parts, project.parts, project.toolsUsed, (project.skillsUsed || []).join(", "), "Technologies not documented");
+  },
+  concepts(project, doc) {
+    return this.firstAvailable(project.engineeringConcepts, doc.concepts, project.concept, doc.skills, (project.skillsUsed || []).join(", "), "Engineering concepts not documented");
+  },
+  timeframe(project, doc) {
+    return this.firstAvailable(project.timeline?.timeframe, doc.timeframe, project.timeframe, "Timeframe not documented");
+  },
+  professionalProjectSummary(project, doc) {
+    const objective = this.firstAvailable(doc.goal, doc.problem, `Build and evaluate ${project.title}.`);
+    const built = this.firstAvailable(doc.design, project.technicalTask, project.notes, `A working ${project.title} prototype was developed.`);
+    const challenge = this.firstAvailable(doc.problems, doc.wiring, doc.code, "Key engineering work included translating the design goal into a testable hardware/software implementation.");
+    const outcome = this.firstAvailable(doc.results, doc.lessons, "Final outcome not documented yet.");
+    return [
+      this.sentence(`Objective: ${objective}`),
+      this.sentence(`Implementation: ${built}`),
+      this.sentence(`Engineering challenge: ${challenge}`),
+      this.sentence(`Outcome: ${outcome}`)
+    ].join(" ");
+  },
+  accomplishmentBullets(project, doc) {
+    const bullets = [
+      `Designed and built ${this.text(project.technicalTask) || this.text(project.title)} using ${this.technologies(project, doc)} to demonstrate ${this.concepts(project, doc)}.`
+    ];
+    if (this.text(doc.tests) || this.text(doc.results)) {
+      bullets.push(`Validated system behavior through documented testing, measurements, and observed results: ${this.firstAvailable(doc.results, doc.tests)}.`);
+    }
+    if (this.text(doc.problems)) {
+      bullets.push(`Diagnosed and resolved implementation issues involving ${this.text(doc.problems)}.`);
+    }
+    if (this.text(doc.wiring) || this.text(doc.code)) {
+      bullets.push("Integrated hardware setup and software logic while documenting wiring, code structure, and setup decisions for repeatable use.");
+    }
+    if (this.text(doc.portfolioSummary) || this.text(doc.employerValue) || this.text(doc.lessons)) {
+      bullets.push("Converted project evidence into export-ready documentation, including technical summary, lessons learned, and next-revision notes.");
+    }
+    while (bullets.length < 3) {
+      bullets.push("Documented project objective, build process, engineering decisions, and final outcome for future portfolio and interview use.");
+    }
+    return bullets.slice(0, 5);
+  },
+  professionalResumeEntry(project, doc) {
+    return `## ${project.title}
+
+**Timeframe:** ${this.timeframe(project, doc)}
+
+**Technologies Used:** ${this.technologies(project, doc)}
+
+**Engineering Concepts Demonstrated:** ${this.concepts(project, doc)}
+
+**Project Summary:** ${this.firstAvailable(doc.professionalSummary, doc.portfolioSummary, this.professionalProjectSummary(project, doc))}
+
+**Selected Accomplishments**
+${this.accomplishmentBullets(project, doc).map((bullet) => `- ${bullet}`).join("\n")}
+`;
+  },
   markdown(project, doc) {
     return `# ${project.title}
 
-## Purpose
-${doc.problem || ""}
+## Professional Project Summary
+${this.professionalProjectSummary(project, doc)}
 
-## Goal
-${doc.goal || ""}
+## Professional Resume Entry
+${doc.resumeEvidence || this.professionalResumeEntry(project, doc)}
 
-## Parts, Tools, and Skills
-${doc.parts || ""}
+## Project Objective
+${doc.goal || doc.problem || ""}
 
-Skills practiced: ${doc.skills || ""}
+## Technologies Used
+${this.technologies(project, doc)}
+
+## Engineering Concepts Demonstrated
+${this.concepts(project, doc)}
 
 ## Build Notes
 ${doc.design || ""}
@@ -129,21 +204,24 @@ ${doc.repoLink || project.github || ""}
     URL.revokeObjectURL(url);
   },
   render(data) {
-    const selectedId = data.selectedDocProjectId || data.projects.find((project) => project.status === "in progress")?.id || data.projects[0]?.id;
+    const selectedId = data.activeProjectId || data.selectedDocProjectId || data.projects.find((project) => project.status === "in progress")?.id || data.projects[0]?.id;
     const project = data.projects.find((item) => item.id === selectedId) || data.projects[0];
     if (!project) {
       return `<section class="panel"><h3>No projects yet</h3><p>Add a project first, then come back to document it.</p></section>`;
     }
     const doc = this.docFor(data, project.id);
-    const progress = this.completion(doc);
+    const maturity = window.ECOSUI.maturity(project, doc);
 
     return `
       <section class="panel hero-panel">
         <div class="row">
           <div>
             <p class="kicker">Current writeup</p>
-            <h3>${project.title}</h3>
-            <p class="muted">Capture the proof as you build. The Portfolio page turns this into career material.</p>
+            <div class="row">
+              <h3>${project.title}</h3>
+              ${window.ECOSUI.pill(maturity.label, maturity.cls)}
+            </div>
+            <p class="muted">This project owns its documentation. The Export Center turns this information into professional files.</p>
           </div>
           <div class="top-actions">
             <a class="button" href="#projects">Back to Projects</a>
@@ -151,7 +229,6 @@ ${doc.repoLink || project.github || ""}
             <button id="exportProjectWord" class="button" type="button">Word Doc</button>
           </div>
         </div>
-        ${window.ECOSUI.meter("Writeup", progress)}
         <label>Project
           <select id="docProjectSelect">
             ${data.projects.map((item) => `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${item.title}</option>`).join("")}
@@ -174,6 +251,15 @@ ${doc.repoLink || project.github || ""}
             </label>
             <label>Skills practiced
               <textarea data-doc-field="skills">${window.ECOSUtils.escape(doc.skills || "")}</textarea>
+            </label>
+            <label>Timeframe
+              <textarea data-doc-field="timeframe" placeholder="Example: Jan 2026 - Feb 2026">${window.ECOSUtils.escape(doc.timeframe || "")}</textarea>
+            </label>
+            <label>Technologies used
+              <textarea data-doc-field="technologies" placeholder="Arduino Uno, C++, breadboard, HC-SR04 sensor">${window.ECOSUtils.escape(doc.technologies || "")}</textarea>
+            </label>
+            <label class="wide">Engineering concepts demonstrated
+              <textarea data-doc-field="concepts" placeholder="Digital I/O, PWM, sensor calibration, feedback control, circuit debugging">${window.ECOSUtils.escape(doc.concepts || "")}</textarea>
             </label>
           </div>
         </article>
@@ -231,25 +317,28 @@ ${doc.repoLink || project.github || ""}
       </section>
 
       <section class="panel">
-        <h3>Portfolio Material</h3>
-        <p class="muted">Write this once here, then generate portfolio and resume drafts from it.</p>
+        <h3>Professional Output Material</h3>
+        <p class="muted">Write this once here, then generate resume entries, project summaries, and engineering reports from the project.</p>
         <div class="form-grid">
-          <label class="wide">Portfolio summary
+          <label class="wide">Professional project summary notes
             <textarea data-doc-field="portfolioSummary" placeholder="Short, employer-readable summary of what you built and what it proves.">${window.ECOSUtils.escape(doc.portfolioSummary || "")}</textarea>
+          </label>
+          <label class="wide">Final professional summary
+            <textarea data-doc-field="professionalSummary" placeholder="Optional polished 2-3 sentence version. If blank, the app builds one from your documentation.">${window.ECOSUtils.escape(doc.professionalSummary || "")}</textarea>
           </label>
           <label class="wide">Why this matters to employers
             <textarea data-doc-field="employerValue">${window.ECOSUtils.escape(doc.employerValue || "")}</textarea>
           </label>
-          <label class="wide">Resume bullet draft
-            <textarea data-doc-field="resumeEvidence">${window.ECOSUtils.escape(doc.resumeEvidence || window.ECOSPages.resume.generateBullet(project))}</textarea>
+          <label class="wide">Professional resume entry override
+            <textarea data-doc-field="resumeEvidence" placeholder="Optional. If blank, the app generates a structured professional resume entry.">${window.ECOSUtils.escape(doc.resumeEvidence || "")}</textarea>
           </label>
           <label class="wide">Next revision
             <textarea data-doc-field="next">${window.ECOSUtils.escape(doc.next || "")}</textarea>
           </label>
         </div>
         <div class="quick-actions">
-          <button class="button primary" data-finish-project="${project.id}" type="button">Mark Portfolio-ready</button>
-          <a class="button" href="#portfolio">Go to Portfolio</a>
+          <button class="button primary" data-finish-project="${project.id}" type="button">Mark Ready to Export</button>
+          <a class="button" href="#portfolio">Go to Export Center</a>
         </div>
       </section>
     `;
@@ -257,7 +346,10 @@ ${doc.repoLink || project.github || ""}
   bind() {
     document.querySelector("#docProjectSelect")?.addEventListener("change", (event) => {
       window.ECOSStore.update((data) => {
+        data.activeProjectId = event.target.value;
         data.selectedDocProjectId = event.target.value;
+        const project = data.projects.find((item) => item.id === event.target.value);
+        if (project && project.status === "planned") project.status = "in progress";
       });
     });
 
@@ -267,6 +359,14 @@ ${doc.repoLink || project.github || ""}
           const selectedProjectId = document.querySelector("#docProjectSelect")?.value || data.selectedDocProjectId || data.projects[0].id;
           const doc = this.docFor(data, selectedProjectId);
           doc[field.dataset.docField] = field.value;
+          const project = data.projects.find((item) => item.id === selectedProjectId);
+          if (project) {
+            if (field.dataset.docField === "technologies") project.technologies = field.value;
+            if (field.dataset.docField === "concepts") project.engineeringConcepts = field.value;
+            if (field.dataset.docField === "timeframe") project.timeline = { ...(project.timeline || {}), timeframe: field.value };
+            if (field.dataset.docField === "repoLink") project.github = field.value;
+            if (field.dataset.docField === "lessons") project.lessons = field.value;
+          }
         }, false);
       });
     });
@@ -289,6 +389,8 @@ ${doc.repoLink || project.github || ""}
         const doc = this.docFor(data, project.id);
         project.status = "complete";
         project.portfolioReady = true;
+        data.activeProjectId = project.id;
+        data.selectedDocProjectId = project.id;
         project.github = doc.repoLink || project.github;
         project.lessons = doc.lessons || project.lessons;
       });
@@ -297,13 +399,13 @@ ${doc.repoLink || project.github || ""}
 
     document.querySelector("#exportProjectMarkdown")?.addEventListener("click", () => {
       const data = window.ECOSStore.get();
-      const project = data.projects.find((item) => item.id === (data.selectedDocProjectId || data.projects[0].id));
+      const project = data.projects.find((item) => item.id === (data.activeProjectId || data.selectedDocProjectId || data.projects[0].id));
       this.exportMarkdown(project, this.docFor(data, project.id));
     });
 
     document.querySelector("#exportProjectWord")?.addEventListener("click", () => {
       const data = window.ECOSStore.get();
-      const project = data.projects.find((item) => item.id === (data.selectedDocProjectId || data.projects[0].id));
+      const project = data.projects.find((item) => item.id === (data.activeProjectId || data.selectedDocProjectId || data.projects[0].id));
       this.exportWord(project, this.docFor(data, project.id));
     });
   }

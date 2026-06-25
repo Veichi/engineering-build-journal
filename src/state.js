@@ -41,19 +41,21 @@ window.ECOSStore = (() => {
     next.journal = mergeById(base.journal, saved.journal);
     next.internship = mergeById(base.internship, saved.internship);
     next.portfolioChecklist = mergeById(base.portfolioChecklist, saved.portfolioChecklist);
-    next.projectDocs = saved.projectDocs || {};
     next.stepChecks = saved.stepChecks || {};
     next.stepNotes = saved.stepNotes || {};
     next.selectedStepKey = saved.selectedStepKey || "";
+    next.activeProjectId = saved.activeProjectId || saved.selectedDocProjectId || next.projects.find((project) => project.status === "in progress")?.id || next.projects.find((project) => project.status === "planned")?.id || next.projects[0]?.id || "";
+    next.selectedDocProjectId = saved.selectedDocProjectId || next.activeProjectId;
     next.lastSaved = saved.lastSaved || "";
     if ((saved.schemaVersion || 0) < 3) cleanOldMockProgress(next);
     if ((saved.schemaVersion || 0) < 4) refreshStarterSteps(next, base);
-    ensureProjectDocs(next);
+    ensureProjectDocumentation(next, saved.projectDocs || {});
+    delete next.projectDocs;
     next.schemaVersion = base.schemaVersion;
     return next;
   }
 
-  function blankProjectDoc(project) {
+  function blankProjectDocumentation(project) {
     return {
       projectId: project.id,
       problem: "",
@@ -69,6 +71,10 @@ window.ECOSStore = (() => {
       portfolioSummary: "",
       employerValue: "",
       resumeEvidence: "",
+      timeframe: "",
+      technologies: "",
+      concepts: "",
+      professionalSummary: "",
       lessons: project.lessons || "",
       next: "",
       photoLinks: "",
@@ -86,10 +92,27 @@ window.ECOSStore = (() => {
     };
   }
 
-  function ensureProjectDocs(next) {
-    next.projectDocs = next.projectDocs || {};
+  function ensureProjectDocumentation(next, legacyDocs = {}) {
     next.projects.forEach((project) => {
-      if (!next.projectDocs[project.id]) next.projectDocs[project.id] = blankProjectDoc(project);
+      project.timeline = project.timeline || {};
+      project.progress = project.progress || {
+        stage: project.portfolioReady ? "Ready to export" : project.status === "complete" ? "Documented" : project.status === "in progress" ? "Building" : "Idea"
+      };
+      project.linkedJournalEntryIds = project.linkedJournalEntryIds || [];
+      project.exportSettings = project.exportSettings || {
+        includeInResume: true,
+        includeInPortfolio: true,
+        includeInReports: true
+      };
+      project.attachments = project.attachments || [];
+      project.documentation = {
+        ...blankProjectDocumentation(project),
+        ...(legacyDocs[project.id] || {}),
+        ...(project.documentation || {})
+      };
+      project.technologies = project.technologies || project.documentation.technologies || project.documentation.parts || project.parts || "";
+      project.engineeringConcepts = project.engineeringConcepts || project.documentation.concepts || project.documentation.skills || (project.skillsUsed || []).join(", ");
+      project.timeline.timeframe = project.timeline.timeframe || project.documentation.timeframe || project.timeframe || "";
     });
   }
 

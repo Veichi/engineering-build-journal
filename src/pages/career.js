@@ -11,15 +11,15 @@ window.ECOSPages.career = {
     return `
       <section class="panel hero-panel">
         <h3>Turn documented projects into proof</h3>
-        <p class="muted">This page is for the career-facing side of the notebook: portfolio readiness, resume bullets, GitHub links, and internship prep. You do not need to update it every day.</p>
+        <p class="muted">This page is for the career-facing side of the notebook: portfolio readiness, professional resume entries, GitHub links, and internship prep. You do not need to update it every day.</p>
         <div class="quick-actions">
-          <button id="generateCareerDocs" class="button primary" type="button">Generate Resume + Portfolio Files</button>
+          <button id="generateCareerDocs" class="button primary" type="button">Generate Professional Files</button>
           <a class="button" href="/exports/career-packet.html" target="_blank" rel="noreferrer">Open Career Packet</a>
         </div>
         <p id="careerDocStatus" class="muted">When running with Node, generated files are saved in <code>career-os/exports</code>.</p>
       </section>
       <section class="grid three">
-        ${window.ECOSUI.stat("Portfolio-ready", readyProjects.length)}
+        ${window.ECOSUI.stat("Ready to export", readyProjects.length)}
         ${window.ECOSUI.stat("GitHub repos", repos.length)}
         ${window.ECOSUI.stat("Internship prep", `${internshipReadiness}%`)}
       </section>
@@ -48,13 +48,13 @@ window.ECOSPages.career = {
         </article>
       </section>
       <section class="panel">
-        <h3>Resume bullet drafts</h3>
+        <h3>Professional resume entries</h3>
         <div class="stack">
           ${data.projects.map((project) => `
             <div class="card">
               <strong>${project.title}</strong>
               <p>${window.ECOSPages.resume.generateBullet(project)}</p>
-              <a class="quiet-link" href="#resume">Edit bullet fields</a>
+              <a class="quiet-link" href="#documentation">Edit project documentation</a>
             </div>
           `).join("")}
         </div>
@@ -63,7 +63,7 @@ window.ECOSPages.career = {
         <h3>Career tools</h3>
         <div class="quick-actions">
           <a class="button" href="#portfolio">Portfolio Builder</a>
-          <a class="button" href="#resume">Resume Bullets</a>
+          <a class="button" href="#resume">Resume Entries</a>
           <a class="button" href="#github">GitHub Tracker</a>
           <a class="button" href="#internship">Internship Prep</a>
         </div>
@@ -71,10 +71,10 @@ window.ECOSPages.career = {
       <section class="panel">
         <h3>Generated files</h3>
         <div class="quick-actions">
-          <a class="button" href="/exports/resume-draft.doc" target="_blank" rel="noreferrer">Resume Word Doc</a>
-          <a class="button" href="/exports/portfolio-draft.doc" target="_blank" rel="noreferrer">Portfolio Word Doc</a>
-          <a class="button" href="/exports/resume-draft.md" target="_blank" rel="noreferrer">Resume Markdown</a>
-          <a class="button" href="/exports/portfolio-draft.md" target="_blank" rel="noreferrer">Portfolio Markdown</a>
+          <a class="button" href="/exports/professional-resume-entry.doc" target="_blank" rel="noreferrer">Professional Resume Entry</a>
+          <a class="button" href="/exports/professional-project-summary.doc" target="_blank" rel="noreferrer">Professional Project Summary</a>
+          <a class="button" href="/exports/professional-resume-entry.md" target="_blank" rel="noreferrer">Resume Markdown</a>
+          <a class="button" href="/exports/professional-project-summary.md" target="_blank" rel="noreferrer">Summary Markdown</a>
           <a class="button" href="/exports/projects/" target="_blank" rel="noreferrer">Project Docs Folder</a>
         </div>
         <p class="muted">Open the career packet in your browser and use Print to save it as a PDF.</p>
