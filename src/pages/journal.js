@@ -59,6 +59,7 @@ window.ECOSPages.journal = {
     URL.revokeObjectURL(url);
   },
   render(data) {
+    const escape = window.ECOSUtils.escape;
     return `
       <section class="panel">
         <div class="row">
@@ -74,7 +75,7 @@ window.ECOSPages.journal = {
           <label>Linked project
             <select name="projectIds">
               <option value="">No linked project</option>
-              ${data.projects.map((project) => `<option value="${project.id}" ${project.id === data.activeProjectId ? "selected" : ""}>${project.title}</option>`).join("")}
+              ${data.projects.map((project) => `<option value="${project.id}" ${project.id === data.activeProjectId ? "selected" : ""}>${escape(project.title)}</option>`).join("")}
             </select>
           </label>
           <label>Objective<textarea name="objective" placeholder="What was the technical goal for this work session?"></textarea></label>
@@ -97,14 +98,14 @@ window.ECOSPages.journal = {
       <section class="stack">
         ${data.journal.map((entry) => `
           <article class="panel journal-entry">
-            <div class="row"><h3>${entry.date || "Undated Entry"}</h3>${window.ECOSUI.pill("notebook")}</div>
-            <p class="muted"><strong>Linked Project:</strong> ${this.linkedProjectNames(data, entry)}</p>
-            <p><strong>Objective:</strong> ${this.field(entry, "objective", "built")}</p>
-            <p><strong>Work Completed:</strong> ${this.field(entry, "workCompleted", "built")}</p>
-            <p><strong>Challenges:</strong> ${this.field(entry, "challenges", "confused")}</p>
-            <p><strong>Engineering Decisions:</strong> ${this.field(entry, "decisions", "solved")}</p>
-            <p><strong>Lessons Learned:</strong> ${this.field(entry, "lessons", "learned")}</p>
-            <p><strong>Next Steps:</strong> ${this.field(entry, "nextSteps", "next")}</p>
+            <div class="row"><h3>${escape(entry.date || "Undated Entry")}</h3>${window.ECOSUI.pill("notebook")}</div>
+            <p class="muted"><strong>Linked Project:</strong> ${escape(this.linkedProjectNames(data, entry))}</p>
+            <p><strong>Objective:</strong> ${escape(this.field(entry, "objective", "built"))}</p>
+            <p><strong>Work Completed:</strong> ${escape(this.field(entry, "workCompleted", "built"))}</p>
+            <p><strong>Challenges:</strong> ${escape(this.field(entry, "challenges", "confused"))}</p>
+            <p><strong>Engineering Decisions:</strong> ${escape(this.field(entry, "decisions", "solved"))}</p>
+            <p><strong>Lessons Learned:</strong> ${escape(this.field(entry, "lessons", "learned"))}</p>
+            <p><strong>Next Steps:</strong> ${escape(this.field(entry, "nextSteps", "next"))}</p>
           </article>
         `).join("") || "<section class='panel'><h3>No notebook entries yet</h3><p class='muted'>Add your first work-session entry above. It will appear here and feed the Engineering Notebook export.</p></section>"}
       </section>

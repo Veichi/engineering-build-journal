@@ -439,6 +439,12 @@ function send(response, status, body, contentType = "text/plain; charset=utf-8")
   response.end(body);
 }
 
+function isPrivateStaticPath(filePath) {
+  const relativePath = path.relative(rootDir, filePath);
+  const segments = relativePath.split(path.sep);
+  return segments.some((segment) => segment.startsWith(".")) || segments[0] === "data" || segments[0] === "node_modules";
+}
+
 async function handleApi(request, response) {
   await ensureDataFile();
 
@@ -489,9 +495,15 @@ async function serveStatic(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
   const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const filePath = path.normalize(path.join(rootDir, requestedPath));
+  const relativePath = path.relative(rootDir, filePath);
 
-  if (!filePath.startsWith(rootDir)) {
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     send(response, 403, "Forbidden");
+    return;
+  }
+
+  if (isPrivateStaticPath(filePath)) {
+    send(response, 404, "Not found");
     return;
   }
 

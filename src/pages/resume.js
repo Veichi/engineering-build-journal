@@ -9,6 +9,7 @@ window.ECOSPages.resume = {
     return `${project.actionVerb || "Built"} ${project.technicalTask || project.title} using ${project.toolsUsed || project.skillsUsed.join(", ")}; ${project.measurableResult || "documented results"} to demonstrate ${project.concept || "engineering design"}.`;
   },
   render(data) {
+    const escape = window.ECOSUtils.escape;
     return `
       <section class="panel">
         <h3>Professional Resume Entries</h3>
@@ -18,10 +19,10 @@ window.ECOSPages.resume = {
         ${data.projects.map((project) => `
           <article class="panel">
             <div class="row">
-              <h3>${project.title}</h3>
+              <h3>${escape(project.title)}</h3>
               ${window.ECOSUI.pill(project.status, window.ECOSUtils.statusClass(project.status))}
             </div>
-            <p>${this.generateBullet(project)}</p>
+            <p>${escape(this.generateBullet(project))}</p>
             <div class="form-grid">
               <label>Action verb<input data-resume="${project.id}:actionVerb" value="${window.ECOSUtils.escape(project.actionVerb || "")}" /></label>
               <label>Technical task<input data-resume="${project.id}:technicalTask" value="${window.ECOSUtils.escape(project.technicalTask || "")}" /></label>

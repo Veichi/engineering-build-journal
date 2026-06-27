@@ -3,6 +3,7 @@ window.ECOSPages = window.ECOSPages || {};
 window.ECOSPages.portfolio = {
   title: "Export Center",
   render(data) {
+    const escape = window.ECOSUtils.escape;
     const projects = data.projects || [];
     const ready = projects.filter((project) => project.portfolioReady);
     const documented = projects.filter((project) => {
@@ -39,10 +40,10 @@ window.ECOSPages.portfolio = {
               return `
                 <div class="card">
                   <div class="row">
-                    <strong>${project.title}</strong>
+                    <strong>${escape(project.title)}</strong>
                     ${window.ECOSUI.maturityPill(project, doc)}
                   </div>
-                  <p>${doc.portfolioSummary || doc.problem || project.notes || "Add a professional summary in Documentation."}</p>
+                  <p>${escape(doc.portfolioSummary || doc.problem || project.notes || "Add a professional summary in Documentation.")}</p>
                   <a class="quiet-link" href="#documentation" data-document-project="${project.id}">Edit writeup</a>
                 </div>
               `;
@@ -52,7 +53,7 @@ window.ECOSPages.portfolio = {
 
         <article class="panel">
           <h3>Make the next project useful</h3>
-          <p>${nextProject ? `<strong>${nextProject.title}</strong> is the next useful build to document.` : "Polish one completed project with photos, measured results, and a clean writeup."}</p>
+          <p>${nextProject ? `<strong>${escape(nextProject.title)}</strong> is the next useful build to document.` : "Polish one completed project with photos, measured results, and a clean writeup."}</p>
           ${nextProject ? `<p class="muted">${window.ECOSPages.projects.recommendationReason(nextProject)}</p>` : ""}
           <h4>Professional output evidence to collect</h4>
           <ul>

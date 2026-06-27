@@ -37,6 +37,7 @@ window.ECOSStore = (() => {
       progress: Number.isFinite(Number(skill.progress)) ? Number(skill.progress) : progressFromStatus(skill.status)
     }));
     next.projects = mergeById(base.projects, saved.projects);
+    next.ideas = saved.ideas || base.ideas || [];
     next.repos = mergeById(base.repos, saved.repos);
     next.journal = mergeById(base.journal, saved.journal);
     next.internship = mergeById(base.internship, saved.internship);

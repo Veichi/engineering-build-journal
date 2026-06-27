@@ -1,6 +1,7 @@
 const routes = [
   ["dashboard", "Home"],
   ["projects", "Projects"],
+  ["ideas", "Ideas"],
   ["documentation", "Document"],
   ["journal", "Notebook"],
   ["portfolio", "Export Center"]

@@ -204,6 +204,7 @@ ${doc.repoLink || project.github || ""}
     URL.revokeObjectURL(url);
   },
   render(data) {
+    const escape = window.ECOSUtils.escape;
     const selectedId = data.activeProjectId || data.selectedDocProjectId || data.projects.find((project) => project.status === "in progress")?.id || data.projects[0]?.id;
     const project = data.projects.find((item) => item.id === selectedId) || data.projects[0];
     if (!project) {
@@ -218,7 +219,7 @@ ${doc.repoLink || project.github || ""}
           <div>
             <p class="kicker">Current writeup</p>
             <div class="row">
-              <h3>${project.title}</h3>
+              <h3>${escape(project.title)}</h3>
               ${window.ECOSUI.pill(maturity.label, maturity.cls)}
             </div>
             <p class="muted">This project owns its documentation. The Export Center turns this information into professional files.</p>
@@ -231,7 +232,7 @@ ${doc.repoLink || project.github || ""}
         </div>
         <label>Project
           <select id="docProjectSelect">
-            ${data.projects.map((item) => `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${item.title}</option>`).join("")}
+            ${data.projects.map((item) => `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${escape(item.title)}</option>`).join("")}
           </select>
         </label>
       </section>

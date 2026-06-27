@@ -37,6 +37,7 @@ Direct browser mode only uses browser `localStorage`; it cannot write to the pro
 
 - Home: active build, suggested next action, and current project focus.
 - Projects: starter-kit friendly project suggestions and project status.
+- Ideas: simple saved project ideas with titles, notes, and tags.
 - Document: project-owned evidence, build notes, professional project summary, and resume-entry source fields.
 - Notebook: dated engineering notebook entries for work sessions and technical reflection.
 - Export Center: generated resume entries, project summaries, engineering notebooks, and project reports.
@@ -59,6 +60,7 @@ career-os/
     pages/
       dashboard.js
       projects.js
+      ideas.js
       documentation.js
       journal.js
       portfolio.js
@@ -78,6 +80,8 @@ The app starts from mock data in:
 ```text
 src/data/mockData.js
 ```
+
+This starter data is application source and should be committed. Your personal saved app state is different and should stay uncommitted.
 
 When served with `npm start`, progress is saved to `data/app-data.json` in this project folder. The browser also keeps a `localStorage` copy as a fallback. Use the export/import buttons to back up or move your data.
 

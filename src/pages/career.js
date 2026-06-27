@@ -3,6 +3,7 @@ window.ECOSPages = window.ECOSPages || {};
 window.ECOSPages.career = {
   title: "Career Materials",
   render(data) {
+    const escape = window.ECOSUtils.escape;
     const readyProjects = data.projects.filter((project) => project.portfolioReady);
     const repos = data.repos.filter((repo) => repo.name || repo.link);
     const internshipDone = data.internship.filter((item) => item.done).length;
@@ -30,7 +31,7 @@ window.ECOSPages.career = {
             ${data.portfolioChecklist.map((item) => `
               <label class="check-row">
                 <input data-career-portfolio="${item.id}" type="checkbox" ${item.done ? "checked" : ""} />
-                <span>${item.item}</span>
+                <span>${escape(item.item)}</span>
               </label>
             `).join("")}
           </div>
@@ -41,7 +42,7 @@ window.ECOSPages.career = {
             ${data.internship.map((item) => `
               <label class="check-row">
                 <input data-career-internship="${item.id}" type="checkbox" ${item.done ? "checked" : ""} />
-                <span><strong>${item.item}</strong><br><span class="muted">${item.notes}</span></span>
+                <span><strong>${escape(item.item)}</strong><br><span class="muted">${escape(item.notes)}</span></span>
               </label>
             `).join("")}
           </div>
@@ -52,8 +53,8 @@ window.ECOSPages.career = {
         <div class="stack">
           ${data.projects.map((project) => `
             <div class="card">
-              <strong>${project.title}</strong>
-              <p>${window.ECOSPages.resume.generateBullet(project)}</p>
+              <strong>${escape(project.title)}</strong>
+              <p>${escape(window.ECOSPages.resume.generateBullet(project))}</p>
               <a class="quiet-link" href="#documentation">Edit project documentation</a>
             </div>
           `).join("")}

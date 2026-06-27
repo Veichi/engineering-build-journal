@@ -18,6 +18,7 @@ window.ECOSRecommender = {
 window.ECOSPages.recommender = {
   title: "Project Recommender",
   render(data) {
+    const escape = window.ECOSUtils.escape;
     const recommendations = window.ECOSRecommender.pick(data);
     return `
       <section class="panel">
@@ -27,11 +28,11 @@ window.ECOSPages.recommender = {
       <section class="grid two">
         ${recommendations.map((project) => `
           <article class="panel">
-            <div class="row"><h3>${project.title}</h3>${window.ECOSUI.pill(project.portfolioValue)}</div>
+            <div class="row"><h3>${escape(project.title)}</h3>${window.ECOSUI.pill(project.portfolioValue)}</div>
             <p><strong>Difficulty:</strong> ${project.difficulty}/5</p>
             <p><strong>Skills used:</strong> ${project.skillsUsed.map((skill) => window.ECOSUI.pill(skill)).join(" ")}</p>
             <p><strong>Missing skills:</strong> ${project.missingSkills.map((skill) => window.ECOSUI.pill(skill, "amber")).join(" ") || "You are ready to attempt this."}</p>
-            <p><strong>Parts/tools:</strong> ${project.parts}</p>
+            <p><strong>Parts/tools:</strong> ${escape(project.parts)}</p>
           </article>
         `).join("")}
       </section>
