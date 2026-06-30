@@ -34,10 +34,7 @@ window.ECOSPages.documentation = {
     return project.documentation;
   },
   completion(doc) {
-    const fields = ["problem", "goal", "design", "tests", "results", "lessons", "portfolioSummary"];
-    const checked = Object.values(doc?.checklist || {}).filter(Boolean).length;
-    const complete = fields.filter((field) => String(doc?.[field] || "").trim()).length + Math.min(checked, 3);
-    return window.ECOSUtils.percent(complete, fields.length + 3);
+    return window.ECOSUI.docCompletion(doc);
   },
   text(value) {
     return String(value || "").trim();
@@ -106,6 +103,23 @@ window.ECOSPages.documentation = {
 **Selected Accomplishments**
 ${this.accomplishmentBullets(project, doc).map((bullet) => `- ${bullet}`).join("\n")}
 `;
+  },
+  documentationGaps(doc) {
+    const fieldLabels = [
+      ["problem", "problem"],
+      ["goal", "success goal"],
+      ["design", "build notes"],
+      ["tests", "test notes"],
+      ["results", "results"],
+      ["lessons", "lesson"],
+      ["portfolioSummary", "professional summary"]
+    ];
+    const proof = window.ECOSUI.proofStatus(doc);
+    const gaps = fieldLabels
+      .filter(([field]) => !this.text(doc[field]))
+      .map(([, label]) => label);
+    if (proof.done < proof.total) gaps.push(proof.next);
+    return gaps.slice(0, 4);
   },
   markdown(project, doc) {
     return `# ${project.title}
@@ -212,9 +226,11 @@ ${doc.repoLink || project.github || ""}
     }
     const doc = this.docFor(data, project.id);
     const maturity = window.ECOSUI.maturity(project, doc);
+    const proof = window.ECOSUI.proofStatus(doc);
+    const gaps = this.documentationGaps(doc);
 
     return `
-      <section class="panel hero-panel">
+      <section class="panel hero-panel doc-hero">
         <div class="row">
           <div>
             <p class="kicker">Current writeup</p>
@@ -236,6 +252,31 @@ ${doc.repoLink || project.github || ""}
           </select>
         </label>
       </section>
+
+      <section class="doc-workspace">
+        <aside class="panel doc-sidebar">
+          <div>
+            <p class="kicker">Readiness</p>
+            ${window.ECOSUI.docProgress(doc)}
+          </div>
+          <dl class="meta-list">
+            <div><dt>Status</dt><dd>${escape(project.status)}</dd></div>
+            <div><dt>Proof</dt><dd>${proof.done}/${proof.total} captured</dd></div>
+            <div><dt>Timeframe</dt><dd>${escape(project.timeline?.timeframe || doc.timeframe || "Not set")}</dd></div>
+            <div><dt>Repository</dt><dd>${escape(doc.repoLink || project.github || "Not linked")}</dd></div>
+          </dl>
+          <div>
+            <h3>Next best fields</h3>
+            <div class="gap-list">
+              ${(gaps.length ? gaps : ["ready for export"]).map((gap) => `<span>${escape(gap)}</span>`).join("")}
+            </div>
+          </div>
+          <div class="quick-actions vertical">
+            <button class="button primary" data-finish-project="${project.id}" type="button">Mark Ready</button>
+            <a class="button" href="#portfolio">Export Center</a>
+          </div>
+        </aside>
+        <div class="doc-main">
 
       <section class="grid two">
         <article class="panel">
@@ -342,6 +383,8 @@ ${doc.repoLink || project.github || ""}
           <a class="button" href="#portfolio">Go to Export Center</a>
         </div>
       </section>
+        </div>
+      </section>
     `;
   },
   bind() {
@@ -362,11 +405,14 @@ ${doc.repoLink || project.github || ""}
           doc[field.dataset.docField] = field.value;
           const project = data.projects.find((item) => item.id === selectedProjectId);
           if (project) {
+            if (field.dataset.docField === "parts") project.parts = field.value;
+            if (field.dataset.docField === "skills") project.skillsUsed = window.ECOSUtils.splitList(field.value);
             if (field.dataset.docField === "technologies") project.technologies = field.value;
             if (field.dataset.docField === "concepts") project.engineeringConcepts = field.value;
             if (field.dataset.docField === "timeframe") project.timeline = { ...(project.timeline || {}), timeframe: field.value };
             if (field.dataset.docField === "repoLink") project.github = field.value;
             if (field.dataset.docField === "lessons") project.lessons = field.value;
+            if (project.status === "planned") project.status = "in progress";
           }
         }, false);
       });
@@ -383,19 +429,21 @@ ${doc.repoLink || project.github || ""}
       });
     });
 
-    document.querySelector("[data-finish-project]")?.addEventListener("click", (event) => {
-      window.ECOSStore.update((data) => {
-        const project = data.projects.find((item) => item.id === event.target.dataset.finishProject);
-        if (!project) return;
-        const doc = this.docFor(data, project.id);
-        project.status = "complete";
-        project.portfolioReady = true;
-        data.activeProjectId = project.id;
-        data.selectedDocProjectId = project.id;
-        project.github = doc.repoLink || project.github;
-        project.lessons = doc.lessons || project.lessons;
+    document.querySelectorAll("[data-finish-project]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        window.ECOSStore.update((data) => {
+          const project = data.projects.find((item) => item.id === event.currentTarget.dataset.finishProject);
+          if (!project) return;
+          const doc = this.docFor(data, project.id);
+          project.status = "complete";
+          project.portfolioReady = true;
+          data.activeProjectId = project.id;
+          data.selectedDocProjectId = project.id;
+          project.github = doc.repoLink || project.github;
+          project.lessons = doc.lessons || project.lessons;
+        });
+        location.hash = "#portfolio";
       });
-      location.hash = "#portfolio";
     });
 
     document.querySelector("#exportProjectMarkdown")?.addEventListener("click", () => {

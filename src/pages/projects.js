@@ -8,6 +8,16 @@ window.ECOSPages.projects = {
     if (project.difficulty <= 3) return "A good next build because it combines hardware, code, and visible behavior without becoming too large.";
     return "A stronger portfolio build. Start it after a few smaller projects are documented.";
   },
+  projectSummary(project) {
+    const doc = project.documentation || {};
+    return window.ECOSPages.documentation.firstAvailable(
+      doc.portfolioSummary,
+      doc.goal,
+      doc.problem,
+      project.notes,
+      "No documentation summary yet."
+    );
+  },
   render(data) {
     const escape = window.ECOSUtils.escape;
     const recommendations = window.ECOSRecommender.pick(data).slice(0, 3);
@@ -16,25 +26,51 @@ window.ECOSPages.projects = {
     const activeProject = data.projects.find((project) => project.id === data.activeProjectId)
       || data.projects.find((project) => project.status === "in progress")
       || data.projects[0];
+    const activeDoc = activeProject?.documentation || {};
+    const activeProof = window.ECOSUI.proofStatus(activeDoc);
+    const averageDocCompletion = data.projects.length
+      ? Math.round(data.projects.reduce((sum, project) => sum + window.ECOSUI.docCompletion(project.documentation || {}), 0) / data.projects.length)
+      : 0;
 
     return `
       <section class="hero-panel journal-hero">
         <div>
           <p class="kicker">Active build</p>
           <h3>${activeProject ? escape(activeProject.title) : "Choose one build at a time."}</h3>
-          <p class="muted">Start small, keep the notes close to the build, and turn finished work into portfolio proof.</p>
+          <p class="muted">${activeProject ? escape(this.projectSummary(activeProject)) : "Start small, keep the notes close to the build, and turn finished work into portfolio proof."}</p>
           <div class="quick-actions">
             <button id="toggleProjectForm" class="button primary" type="button">New Project</button>
             <a class="button" href="#ideas">Open Ideas</a>
-            ${activeProject ? `<a class="button" href="#documentation" data-document-project="${activeProject.id}">Document Active Build</a>` : ""}
+            ${activeProject ? `<a class="button" href="#documentation" data-document-project="${activeProject.id}">Continue Documentation</a>` : ""}
           </div>
         </div>
-        <div class="hero-card">
-          <span class="sketch-mark"></span>
-          <strong>${activeProject ? escape(activeProject.status) : "planned"}</strong>
-          <p>${activeProject ? escape(activeProject.parts || "Parts/tools not added yet.") : "Add a project to begin."}</p>
-          ${activeProject ? window.ECOSUI.maturityPill(activeProject, activeProject.documentation || {}) : ""}
+        <div class="hero-card project-brief">
+          <div class="row">
+            <strong>${activeProject ? escape(activeProject.status) : "planned"}</strong>
+            ${activeProject ? window.ECOSUI.maturityPill(activeProject, activeDoc) : ""}
+          </div>
+          ${activeProject ? window.ECOSUI.docProgress(activeDoc) : ""}
+          <dl class="meta-list">
+            <div><dt>Parts</dt><dd>${activeProject ? escape(activeDoc.parts || activeProject.parts || "Not added") : "Add a project"}</dd></div>
+            <div><dt>Proof</dt><dd>${activeProof.done}/${activeProof.total} captured</dd></div>
+            <div><dt>Next</dt><dd>${escape(activeProof.next)}</dd></div>
+          </dl>
         </div>
+      </section>
+
+      <section class="grid three project-stats">
+        ${window.ECOSUI.stat("Active builds", active.length, "Planned or in progress")}
+        ${window.ECOSUI.stat("Ready to export", data.projects.filter((project) => project.portfolioReady).length, "Portfolio-ready projects")}
+        ${window.ECOSUI.stat("Average docs", `${averageDocCompletion}%`, "Across saved projects")}
+      </section>
+
+      <section class="panel project-workbench">
+        <div>
+          <p class="kicker">Project + documentation</p>
+          <h3>One workspace for each build</h3>
+          <p class="muted">Project fields and documentation fields stay linked. Updating technologies, concepts, repo links, lessons, and timeframe in Document updates the project record used by portfolio exports.</p>
+        </div>
+        <a class="button primary" href="#documentation" ${activeProject ? `data-document-project="${activeProject.id}"` : ""}>Open Documentation Workspace</a>
       </section>
 
       <section id="projectFormPanel" class="panel add-panel" hidden>
@@ -65,7 +101,8 @@ window.ECOSPages.projects = {
               ${window.ECOSUI.maturityPill(project, project.documentation || {})}
             </div>
             <p>${this.recommendationReason(project)}</p>
-            <p><strong>Parts:</strong> ${escape(project.parts || "Add parts/tools")}</p>
+            ${window.ECOSUI.docProgress(project.documentation || {})}
+            <p><strong>Next proof:</strong> ${escape(window.ECOSUI.proofStatus(project.documentation || {}).next)}</p>
             <div class="quick-actions">
               <button class="button primary" data-start-project="${project.id}" type="button">Make Active</button>
               <a class="button" href="#documentation" data-document-project="${project.id}">Document</a>
@@ -92,7 +129,15 @@ window.ECOSPages.projects = {
                 <h3>${escape(project.title)}</h3>
                 ${window.ECOSUI.maturityPill(project, project.documentation || {})}
               </div>
-              <p class="muted">${escape(project.parts || "Parts/tools not added yet.")}</p>
+              <p class="muted">${escape(this.projectSummary(project))}</p>
+              <div class="project-row-grid">
+                ${window.ECOSUI.docProgress(project.documentation || {})}
+                <dl class="meta-list compact">
+                  <div><dt>Parts</dt><dd>${escape(project.documentation?.parts || project.parts || "Not added")}</dd></div>
+                  <div><dt>Repo</dt><dd>${escape(project.documentation?.repoLink || project.github || "Not linked")}</dd></div>
+                  <div><dt>Next proof</dt><dd>${escape(window.ECOSUI.proofStatus(project.documentation || {}).next)}</dd></div>
+                </dl>
+              </div>
               <p>${(project.skillsUsed || []).map((skill) => window.ECOSUI.pill(skill)).join(" ")}</p>
             </div>
             <div class="project-actions">
@@ -103,7 +148,7 @@ window.ECOSPages.projects = {
               </label>
               <label class="check-row"><input data-project-ready="${project.id}" type="checkbox" ${project.portfolioReady ? "checked" : ""} /><span>Ready to export</span></label>
               <button class="button" data-make-active="${project.id}" type="button">${project.id === data.activeProjectId ? "Active Build" : "Make Active"}</button>
-              <a class="button primary" href="#documentation" data-document-project="${project.id}">Document</a>
+              <a class="button primary" href="#documentation" data-document-project="${project.id}">Continue Docs</a>
               <button class="button danger" data-delete-project="${project.id}" type="button">Delete</button>
             </div>
           </article>
